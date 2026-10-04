@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
@@ -347,7 +347,7 @@ main.drawer-panel #fab{opacity:0;visibility:hidden}
 /* ======================= 多语言（中文 / English，默认中文） ======================= */
 const LANG_KEY = 'huxing-lang';
 const LANGS = ['zh', 'zht', 'en'];             // 简体 / 繁體（台湾用字）/ English
-let LANG = (() => { try { const l = localStorage.getItem(LANG_KEY); return LANGS.includes(l) ? l : 'zh'; } catch(e) { return 'zh'; } })();
+let LANG = (() => { try { const l = localStorage.getItem(LANG_KEY); return LANGS.includes(l) ? l : 'en'; } catch(e) { return 'en'; } })();
 // 简 → 繁：先按词替换一字多义的字，再逐字查表（表由 OpenCC s2tw 按本页用到的字生成）
 const S2T_PHRASES = [['布置','佈置'],['布局','佈局'],['台面','檯面'],['复制','複製']];
 const S2T = new Map(('与與两兩个個为為书書于於仅僅从從价價会會传傳体體余餘侧側倾傾储儲儿兒关關内內写寫净淨准準击擊则則刚剛删刪制製办辦动動势勢区區单單占佔卧臥卫衛厅廳历歷压壓厨廚双雙发發变變叶葉后後吗嗎听聽启啟哑啞围圍图圖圆圓场場坐座块塊垫墊墙牆处處备備复復头頭妆妝婴嬰实實宽寬对對导導层層屉屜属屬岛島带帶干乾并並库庫应應开開当當径徑态態总總悬懸懒懶户戶护護拟擬择擇挂掛挡擋挤擠损損换換据據摆擺摇搖撑撐数數无無时時显顯暂暫机機杂雜杆桿条條来來松鬆构構柜櫃标標栈棧栏欄样樣梁樑棱稜椭橢横橫橱櫥气氣没沒注註浅淺测測浏瀏游遊滚滾满滿灯燈灵靈点點热熱状狀独獨环環现現电電画畫监監盖蓋盘盤砖磚确確离離积積称稱竖豎筑築签籤类類约約级級线線结結绕繞绘繪给給统統继繼绿綠缀綴编編缝縫缩縮网網联聯脚腳获獲虚虛装裝见見视視览覽触觸计計认認让讓议議记記设設识識译譯该該语語请請读讀调調负負败敗质質贴貼赶趕转轉轮輪软軟轴軸轻輕载載较較辅輔辑輯边邊过過这這进進远遠适適选選邻鄰里裡针針钢鋼钮鈕铰鉸铺鋪销銷锁鎖键鍵镜鏡长長门門闭閉闲閒间間阅閱阳陽阴陰阶階随隨隐隱静靜页頁顶頂项項顺順颜顏飘飄飞飛马馬鸟鳥齐齊龙龍').match(/../gu).map(p => [...p]));
@@ -627,6 +627,14 @@ const PLANS = {
           [false,-2300,0,[2425,1195,580,1000,2730]],[false,-2800,0,[7930]],
           [false,9250,0,[2425,200,2265,200,2840]],[false,9750,0,[7930]],
           [true,10200,-200,[200,820,1400,1260,1000,380,200,1030,1380,880,200]],[true,10700,-200,[8750]]]},
+  // 户型三：场地 14.8 m（西→东）× 13.5 m（南→北）≈ 200 m²；图面旋转 90°，东朝下（南为图左、北为图右、西为图上），原点在场地西南角
+  p3: {id:'p3', title:['装修设计（场地 200 m²）','Interior Design (200 m² lot)'], label:['户型三','Plan 3'],
+    walls:[], wins:[], doors:[], slides:[], rooms:[], furniture:() => [],
+    bounds:{x:-2000, y:-2000, w:18500, h:18800}, center:[6750,7400], winSill:() => .9, lintels:[],
+    lot:[0,0,13500,14800],
+    compass:{at:[15000,800], north:90},
+    walk:{pos:[6750,-1500], look:[6750,3000]},
+    dims:[[true,-700,0,[13500]],[false,-700,0,[14800]]]},
 };
 const PLAN_KEY = 'huxing-plan';
 let PLAN, WALLS, WINS, DOORS, SLIDES, ROOMS, BOUNDS;
@@ -876,7 +884,7 @@ function renderOpenings(){
     else { const L = x1-x0, m = (y0+y1)/2; s += `<rect x="${x0}" y="${m-45}" width="${L*.55}" height="40" fill="#fff" ${DS}/><rect x="${x1-L*.55}" y="${m+5}" width="${L*.55}" height="40" fill="#fff" ${DS}/>`; }
   });
   // 入户标识
-  s += `<path d="${PLAN.entry.path}" fill="none" stroke="#b5653a" stroke-width="2" vector-effect="non-scaling-stroke"/>
+  if (PLAN.entry) s += `<path d="${PLAN.entry.path}" fill="none" stroke="#b5653a" stroke-width="2" vector-effect="non-scaling-stroke"/>
         <text x="${PLAN.entry.tx}" y="${PLAN.entry.ty}" font-size="200" fill="#b5653a">${tr('入户','Entry')}</text>`;
   $('#gOpen').innerHTML = s;
 }
