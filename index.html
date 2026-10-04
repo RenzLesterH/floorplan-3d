@@ -228,7 +228,8 @@ main.drawer-panel #fab{opacity:0;visibility:hidden}
       <button class="btn chip" id="tgLib" data-en="◧ Library">◧ 家具库</button>
       <button class="btn chip" id="tgPanel" data-en="Properties ◨">属性 ◨</button>
     </div>
-    <div class="brand"><b data-en="3BR 2LR 2BA · Interior Design">三室两厅两卫 · 装修设计</b><span id="subtitle">原始户型 1:60 · 尺寸单位 mm</span></div>
+    <div class="brand"><b id="brandT">三室两厅两卫 · 装修设计</b><span id="subtitle">原始户型 1:60 · 尺寸单位 mm</span></div>
+    <select id="planSel" class="btn" style="border:1px solid var(--line);background:#fff" title="切换户型" data-en-title="Switch floor plan"></select>
     <div class="grp seg" id="viewSeg" title="切换 2D / 3D (T)" data-en-title="Switch 2D / 3D (T)">
       <span class="pill"></span>
       <button class="btn" data-view="2d" data-en="2D Plan">2D 平面</button>
@@ -356,7 +357,7 @@ const tr = (zh, en) => LANG === 'en' ? en : LANG === 'zht' ? s2t(zh) : zh;
 const NAMES_EN = {
   '主卧室':'Master Bedroom', '主卫浴':'Master Bath', '小孩房':"Kids' Room", '客卫浴':'Guest Bath', '洗衣阳台':'Laundry Balcony',
   '子女房':"Children's Room", '厨房':'Kitchen', '餐厅':'Dining', '过道':'Hallway', '客厅':'Living Room', '休闲阳台':'Leisure Balcony',
-  '主卧飘窗':'Master Bay Window', '子女房飘窗':"Children's Bay Window",
+  '主卧飘窗':'Master Bay Window', '卫生间':'Bathroom', '客餐厨一体':'Open Living / Kitchen', '儿童房':"Kids' Room", '次卧':'Bedroom 2', '主卧':'Master Bedroom', '阳台':'Balcony', '服务阳台':'Service Yard', '脚凳':'Ottoman', '岛台':'Kitchen Island', '子女房飘窗':"Children's Bay Window",
   '橡木地板':'Oak Flooring', '胡桃木地板':'Walnut Flooring', '800 地砖':'800 Tile', '600 地砖':'600 Tile', '大理石':'Marble',
   '300 防滑砖':'300 Anti-slip Tile', '水磨石':'Terrazzo', '满铺地毯':'Wall-to-wall Carpet',
   '卧室':'Bedroom', '餐厨':'Dining & Kitchen', '卫浴':'Bathroom', '家电':'Appliances', '书房 · 休闲':'Study & Leisure',
@@ -381,6 +382,11 @@ function applyStaticLang(){
   document.querySelectorAll('[data-en]').forEach(el => { el.dataset.zh ??= el.textContent; el.textContent = tr(el.dataset.zh, el.dataset.en); });
   document.querySelectorAll('[data-en-title]').forEach(el => { el.dataset.zhTitle ??= el.title; el.title = tr(el.dataset.zhTitle, el.dataset.enTitle); });
   document.querySelectorAll('#langSel [data-lang]').forEach(b => { const on = b.dataset.lang === LANG; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
+  renderPlanUI();
+}
+function renderPlanUI(){
+  $('#brandT').textContent = tr(...PLAN.title);
+  $('#planSel').innerHTML = Object.values(PLANS).map(p => `<option value="${p.id}" ${p.id === PLAN.id ? 'selected' : ''}>${esc(tr(...p.label))}</option>`).join('');
 }
 
 /* ============================================================
@@ -392,7 +398,7 @@ function applyStaticLang(){
  *  右：3370/240/2760/240/3950 = 10560
  * ============================================================ */
 // 墙体：[x0,y0,x1,y1,类型]  b=承重(黑) e=外墙 n=可拆非承重 low=矮墙
-const WALLS = [
+const P1_WALLS = [
   // 顶部外墙
   [1580,-240,2120,0,'b'],[1580,0,1820,300,'b'],[2120,-240,4580,0,'e'],[4580,-240,5140,0,'e'],
   [5760,-240,6050,0,'e'],[6050,-240,6600,0,'b'],[6360,0,6600,300,'b'],[6600,-240,9960,0,'e'],
@@ -420,7 +426,7 @@ const WALLS = [
   [6083,4600,6323,6610,'n'],[6323,6370,9960,6610,'n'],
 ];
 // 窗
-const WINS = [
+const P1_WINS = [
   [5140,-240,5760,0],[1580,300,1820,3370],[-240,3370,1580,3610],[2180,3825,2420,4430],
   [10510,6370,12090,6610],[11850,6610,12090,9960],
   // 飘窗（主卧 / 子女房）
@@ -428,7 +434,7 @@ const WINS = [
   [10510,4110,11130,4210],[11030,4210,11130,5785],[10510,5785,11130,5885],
 ];
 // 平开门：洞口、铰点、关闭方向、开启方向、门宽
-const DOORS = [
+const P1_DOORS = [
   {name:'小孩房门',rect:[4580,2400,4820,3280],h:[4580,3280],c:[0,-1],o:[-1,0],len:880},
   {name:'主卧门',rect:[6360,2400,6600,3280],h:[6600,3280],c:[0,-1],o:[1,0],len:880},
   {name:'主卫门',rect:[6360,1198,6600,1983],h:[6360,1198],c:[0,1],o:[-1,0],len:785},
@@ -437,12 +443,12 @@ const DOORS = [
   {name:'入户门',rect:[4580,8310,4820,9200],h:[4820,9200],c:[0,-1],o:[1,0],len:890,entry:true},
 ];
 // 推拉门
-const SLIDES = [
+const P1_SLIDES = [
   {rect:[10270,7400,10510,9770],v:true},
   {rect:[1275,4950,2090,5190],v:false},
 ];
 const R = (x0,y0,x1,y1) => [[x0,y0],[x1,y0],[x1,y1],[x0,y1]];
-const ROOMS = [
+const P1_ROOMS = [
   {id:'master', name:'主卧室', poly:R(6600,0,10270,3370), mat:'wood', at:[8435,2420]},
   {id:'mbath', name:'主卫浴', poly:R(4820,0,6360,2080), mat:'antislip', at:[5980,1780]},
   {id:'kid', name:'小孩房', poly:R(1820,0,4580,3370), mat:'wood', at:[3380,2330]},
@@ -536,14 +542,108 @@ function defaultFurniture(){ return [
   F('armchair','休闲椅',11180,8880,750,750,180,'#d6b99a'), F('plant','绿植',11550,10250,500,500),
 ];}
 
+/* ======================= 户型 2：三室一卫 + 服务阳台（场地约 200 m²） =======================
+ * 数据按截图比例（约 7.7 mm/px，并用图中 4.73 / 8.01 / 9.27 / 6.17 m² 校核）推算。
+ * 原点 = 主屋左上内角；外墙厚 200。 */
+const P2_WALLS = [
+  // 北墙（入户门两侧）/ 服务阳台北墙
+  [-200,-200,3620,0,'e'],[4620,-200,8550,0,'e'],[-1720,-200,-200,0,'e'],
+  // 西墙
+  [-200,0,0,2425,'e'],[-200,3620,0,4200,'e'],[-200,5200,0,7930,'e'],
+  // 东墙
+  [8350,0,8550,7930,'e'],
+  // 南墙
+  [-200,7930,820,8130,'e'],[2220,7930,3480,8130,'e'],[4480,7930,6090,8130,'e'],[7470,7930,8550,8130,'e'],
+  // 阳台
+  [-200,8130,0,9580,'e'],[4860,8130,5060,9580,'e'],[-200,9380,4860,9580,'e'],
+  // 客餐厨 / 卧室之间的隔墙（承重）
+  [4860,0,5060,100,'b'],[4860,1100,5060,2795,'b'],[4860,3795,5060,5275,'b'],[4860,6275,5060,7930,'b'],
+  // 卧室之间的隔墙
+  [5060,2425,8350,2625,'n'],[5060,4890,8350,5090,'n'],
+  // 卫生间
+  [3070,0,3270,100,'n'],[3070,1060,3270,1755,'n'],[0,1555,3070,1755,'n'],
+  // 服务阳台
+  [-1720,0,-1520,5390,'e'],[-1720,5390,-1000,5490,'low'],
+];
+const P2_WINS = [[-200,2425,0,3620],[820,7930,2220,8130],[6090,7930,7470,8130]];
+const P2_DOORS = [
+  {name:'入户门',rect:[3620,-200,4620,0],h:[4620,-200],c:[-1,0],o:[0,-1],len:1000,entry:true},
+  {name:'卫生间门',rect:[3070,100,3270,1060],h:[3070,100],c:[0,1],o:[-1,0],len:960},
+  {name:'儿童房门',rect:[4860,115,5060,1100],h:[5060,1100],c:[0,-1],o:[1,0],len:985},
+  {name:'次卧门',rect:[4860,2795,5060,3795],h:[5060,3795],c:[0,-1],o:[1,0],len:1000},
+  {name:'主卧门',rect:[4860,5275,5060,6275],h:[5060,6275],c:[0,-1],o:[1,0],len:1000},
+  {name:'阳台门',rect:[3480,7930,4480,8130],h:[4480,7930],c:[-1,0],o:[0,-1],len:1000},
+  {name:'服务阳台门',rect:[-200,4200,0,5200],h:[-200,4200],c:[0,1],o:[-1,0],len:1000},
+];
+const P2_ROOMS = [
+  {id:'bath', name:'卫生间', poly:R(0,0,3070,1555), mat:'antislip', at:[1540,1200]},
+  {id:'living', name:'客餐厨一体', poly:[[3270,0],[4860,0],[4860,7930],[0,7930],[0,1755],[3270,1755]], mat:'wood', at:[3900,4300]},
+  {id:'kids', name:'儿童房', poly:R(5060,0,8350,2425), mat:'wood', at:[7400,1260]},
+  {id:'bed2', name:'次卧', poly:R(5060,2625,8350,4890), mat:'wood', at:[5700,3500]},
+  {id:'master', name:'主卧', poly:R(5060,5090,8350,7930), mat:'wood', at:[5950,5700]},
+  {id:'balcony', name:'阳台', poly:R(0,8130,4860,9380), mat:'wood', at:[2430,8760]},
+  {id:'yard', name:'服务阳台', poly:R(-1520,0,-200,5390), mat:'tile600', at:[-860,3900]},
+];
+function p2Furniture(){ return [
+  // 卫生间
+  F('toilet','马桶',1480,350,400,700), F('vanity','浴室柜',600,230,500,400),
+  // 厨房
+  F('counter','橱柜台面',830,1990,1650,460), F('fridge','冰箱',1930,2010,560,520),
+  F('stove','燃气灶',260,2640,750,450,270), F('ksink','水槽',260,3350,800,450,270),
+  F('table','岛台',2300,3490,1520,840,0,'#7a2f22'),
+  // 客厅
+  F('cornersofa','转角沙发',2525,6180,2020,1480,90), F('sidetable','脚凳',2870,7590,750,600,0,'#4f7096'),
+  F('cabinet','储物柜',200,6910,2000,400,270,'#f1eee9'),
+  // 儿童房
+  F('bed','单人床',7530,440,800,1600,90,'#7ea0d6'), F('bed','单人床',7530,2000,800,1600,90,'#7ea0d6'),
+  // 次卧
+  F('bed','双人床 1.5m',7330,3390,1500,2000,90,'#b24a52'),
+  // 主卧
+  F('bed','双人床 1.5m',7560,6160,1500,2000,0,'#b24a52'),
+  // 服务阳台
+  F('counter','橱柜台面',-1290,1170,2300,460,90,'#5c5a57'), F('washer','洗衣机',-1250,2650,600,600),
+];}
+
+// 平面图注册表：切换户型时把当前户型的几何数据赋给下面这组全局变量
+const PLANS = {
+  p1: {id:'p1', title:['三室两厅两卫 · 装修设计','3BR 2LR 2BA · Interior Design'], label:['户型一 · 三室两厅两卫','Plan 1 · 3BR 2LR 2BA'],
+    walls:P1_WALLS, wins:P1_WINS, doors:P1_DOORS, slides:P1_SLIDES, rooms:P1_ROOMS, furniture:defaultFurniture,
+    bounds:{x:-1850, y:-1750, w:15600, h:14100}, center:[6000,5300], winSill:i => i === 0 ? 1.4 : i >= 6 ? .45 : .9,
+    lintels:[[[10270,800,10510,2600], 2.4], [[10270,4260,10510,5740], 2.4]],
+    entry:{path:'M3350 8755H4350M4150 8600L4400 8755L4150 8910', tx:3380, ty:8600},
+    walk:{pos:[4200,8755], look:[7000,8755]},
+    dims:[[true,-750,0,[1580,240,2760,240,1540,240,3670]],[true,-1250,0,[10270]],
+          [true,11350,0,[2180,240,2160,240,5450,240,1340]],[true,11850,0,[11850]],
+          [false,-800,0,[3370,1580,240,2770,240,2360]],[false,-1300,0,[10560]],
+          [false,12750,0,[3370,240,2760,240,3950]],[false,13250,0,[10560]]]},
+  p2: {id:'p2', title:['三室一卫 · 装修设计（场地 200 m²）','3BR 1BA · Interior Design (200 m² lot)'], label:['户型二 · 三室一卫','Plan 2 · 3BR 1BA'],
+    walls:P2_WALLS, wins:P2_WINS, doors:P2_DOORS, slides:[], rooms:P2_ROOMS, furniture:p2Furniture,
+    bounds:{x:-3950, y:-2500, w:14900, h:14700}, center:[3415,4690], winSill:() => .9, lintels:[],
+    lot:[-3600,-2150,10600,11850],
+    compass:{at:[9500,-1100], north:0},   // north：正北相对图面“上”顺时针转的角度（°），按实际朝向改这里
+    entry:{path:'M4120 400V1500M3960 1250L4120 1520L4280 1250', tx:4220, ty:800},
+    walk:{pos:[4120,-1800], look:[4120,800]},
+    dims:[[true,-900,-200,[200,3070,200,350,1000,240,200,3290,200]],[true,-1400,-200,[8750]],
+          [false,-2300,0,[2425,1195,580,1000,2730]],[false,-2800,0,[7930]],
+          [false,9250,0,[2425,200,2265,200,2840]],[false,9750,0,[7930]],
+          [true,10200,-200,[200,820,1400,1260,1000,380,200,1030,1380,880,200]],[true,10700,-200,[8750]]]},
+};
+const PLAN_KEY = 'huxing-plan';
+let PLAN, WALLS, WINS, DOORS, SLIDES, ROOMS, BOUNDS;
+function applyPlan(id){
+  PLAN = PLANS[id]; ({walls:WALLS, wins:WINS, doors:DOORS, slides:SLIDES, rooms:ROOMS, bounds:BOUNDS} = PLAN);
+  try { localStorage.setItem(PLAN_KEY, id); } catch(e) {}
+}
+applyPlan((() => { try { const p = localStorage.getItem(PLAN_KEY); return PLANS[p] ? p : 'p1'; } catch(e) { return 'p1'; } })());
+
 function defaultState(){
   const rooms = {}; ROOMS.forEach(r => rooms[r.id] = {name:r.name, mat:r.mat});
-  return {furniture:defaultFurniture(), rooms, demolished:[], measures:[]};
+  return {furniture:PLAN.furniture(), rooms, demolished:[], measures:[]};
 }
 
-const STORE = 'huxing-design-v1';
+const storeKey = () => PLAN.id === 'p1' ? 'huxing-design-v1' : 'huxing-design-v1:' + PLAN.id;   // 户型一沿用旧键，已有方案不丢
 function load(){
-  try { const s = JSON.parse(localStorage.getItem(STORE)); if (s && Array.isArray(s.furniture)) return fixState(s); } catch(e) {}
+  try { const s = JSON.parse(localStorage.getItem(storeKey())); if (s && Array.isArray(s.furniture)) return fixState(s); } catch(e) {}
   return null;
 }
 function fixState(s){
@@ -557,7 +657,6 @@ const PX_MM = 25.4 / 96;                       // 1 CSS px = 0.2646 mm
 const COARSE = matchMedia('(pointer:coarse)').matches;   // iPad / 手机等触屏为主的设备
 const TAP = COARSE ? 9 : 4;                    // 手指按下后移动超过该像素才算拖动
 const narrow = () => matchMedia('(max-width:1100px)').matches;
-const BOUNDS = {x:-1850, y:-1750, w:15600, h:14100};
 const $ = s => document.querySelector(s);
 const svg = $('#plan');
 
@@ -569,7 +668,7 @@ const ui = {tool:'select', sel:null, mA:null, mCur:null,
 let view = {x0:0, y0:0, s:.06};
 const undoStack = [], redoStack = [];
 
-function save(){ try { localStorage.setItem(STORE, JSON.stringify(state)); } catch(e) {} }
+function save(){ try { localStorage.setItem(storeKey(), JSON.stringify(state)); } catch(e) {} }
 const snap = () => JSON.stringify(state);
 function commit(before){ undoStack.push(before); if (undoStack.length > 150) undoStack.shift(); redoStack.length = 0; save(); }
 function mutate(fn){ const b = snap(); fn(); commit(b); renderAll(); }
@@ -777,15 +876,22 @@ function renderOpenings(){
     else { const L = x1-x0, m = (y0+y1)/2; s += `<rect x="${x0}" y="${m-45}" width="${L*.55}" height="40" fill="#fff" ${DS}/><rect x="${x1-L*.55}" y="${m+5}" width="${L*.55}" height="40" fill="#fff" ${DS}/>`; }
   });
   // 入户标识
-  s += `<path d="M3350 8755H4350M4150 8600L4400 8755L4150 8910" fill="none" stroke="#b5653a" stroke-width="2" vector-effect="non-scaling-stroke"/>
-        <text x="3380" y="8600" font-size="200" fill="#b5653a">${tr('入户','Entry')}</text>`;
+  s += `<path d="${PLAN.entry.path}" fill="none" stroke="#b5653a" stroke-width="2" vector-effect="non-scaling-stroke"/>
+        <text x="${PLAN.entry.tx}" y="${PLAN.entry.ty}" font-size="200" fill="#b5653a">${tr('入户','Entry')}</text>`;
   $('#gOpen').innerHTML = s;
 }
 
 function renderLabels(){
   const g = $('#gLabels');
   g.setAttribute('display', ui.layers.labels ? 'inline' : 'none');
-  g.innerHTML = ROOMS.filter(r => r.at).map(r => {
+  const lot = PLAN.lot ? (([x0,y0,x1,y1]) => `<rect x="${x0}" y="${y0}" width="${x1-x0}" height="${y1-y0}" fill="none" stroke="#8a7f6c" stroke-width="1.2" stroke-dasharray="9 6" vector-effect="non-scaling-stroke"/>
+      <text x="${x0+150}" y="${y0+330}" font-size="230" fill="#8a7f6c">${tr('场地', 'Lot')} ≈ ${fmt((x1-x0)*(y1-y0)/1e6, 0)} m²</text>`)(PLAN.lot) : '';
+  const cp = PLAN.compass ? (({at:[cx,cy], north}) => `<g transform="translate(${cx} ${cy})">
+      <circle r="520" fill="rgba(251,249,244,.9)" stroke="#8a7f6c" stroke-width="1.2" vector-effect="non-scaling-stroke"/>
+      <g transform="rotate(${north})"><path d="M0 -430L130 90L0 -10L-130 90Z" fill="#b5653a"/><path d="M0 430L130 -90L0 10L-130 -90Z" fill="#cfc8b8"/>
+        <text y="-560" font-size="260" font-weight="700" text-anchor="middle" fill="#b5653a">N</text>
+        <text y="800" font-size="190" text-anchor="middle" fill="#7d7366">S</text><text x="690" y="65" font-size="190" text-anchor="middle" fill="#7d7366">E</text><text x="-690" y="65" font-size="190" text-anchor="middle" fill="#7d7366">W</text></g></g>`)(PLAN.compass) : '';
+  g.innerHTML = lot + cp + ROOMS.filter(r => r.at).map(r => {
     const [x,y] = r.at, halo = 'stroke="#fbf9f4" stroke-width="45" paint-order="stroke" stroke-linejoin="round"';
     return `<text x="${x}" y="${y}" font-size="250" font-weight="600" text-anchor="middle" fill="#2b2824" ${halo}>${esc(nm(state.rooms[r.id].name))}</text>
       <text x="${x}" y="${y+260}" font-size="175" text-anchor="middle" fill="#7d7366" ${halo}>${fmt(area(r.poly))} m²</text>`;
@@ -805,11 +911,7 @@ function renderDims(){
     return s;
   };
   const g = $('#gDims');
-  g.innerHTML =
-    chain(true,-750,0,[1580,240,2760,240,1540,240,3670]) + chain(true,-1250,0,[10270]) +
-    chain(true,11350,0,[2180,240,2160,240,5450,240,1340]) + chain(true,11850,0,[11850]) +
-    chain(false,-800,0,[3370,1580,240,2770,240,2360]) + chain(false,-1300,0,[10560]) +
-    chain(false,12750,0,[3370,240,2760,240,3950]) + chain(false,13250,0,[10560]);
+  g.innerHTML = PLAN.dims.map(d => chain(...d)).join('');
   g.setAttribute('display', ui.layers.dims ? 'inline' : 'none');
 }
 
@@ -1471,12 +1573,12 @@ document.addEventListener('pointerdown', e => { const m = $('details.menu'); if 
 matchMedia('(max-width:1100px)').addEventListener('change', () => drawer(null));
 drawer(null);                                  // 恢复上次的面板收起状态
 $('#exportPng').onclick = exportPNG;
-$('#exportJson').onclick = () => download(tr('户型装修方案', 'floor-plan-design') + '.json', new Blob([JSON.stringify(state, null, 2)], {type:'application/json'}));
+$('#exportJson').onclick = () => download(tr('户型装修方案', 'floor-plan-design') + '.json', new Blob([JSON.stringify({plan:PLAN.id, ...state}, null, 2)], {type:'application/json'}));
 $('#importJson').onclick = () => $('#fileIn').click();
 $('#fileIn').onchange = e => {
   const file = e.target.files[0]; if (!file) return;
   file.text().then(txt => {
-    try { const s = JSON.parse(txt); if (!Array.isArray(s.furniture)) throw 0; const b = snap(); state = fixState(s); ui.sel = null; commit(b); renderAll(); toast(tr('方案已导入', 'Plan imported')); }
+    try { const s = JSON.parse(txt); if (!Array.isArray(s.furniture)) throw 0; if (PLANS[s.plan] && s.plan !== PLAN.id) switchPlan(s.plan); const b = snap(); state = fixState(s); ui.sel = null; commit(b); renderAll(); toast(tr('方案已导入', 'Plan imported')); }
     catch(err){ toast(tr('文件格式不正确', 'Invalid file format')); }
   });
   e.target.value = '';
@@ -1491,6 +1593,15 @@ new ResizeObserver(() => {
   else { view.x0 -= (w - lastW)/2/view.s; view.y0 -= (h - lastH)/2/view.s; applyView(); }
   lastW = w; lastH = h;
 }).observe(svg);
+
+function switchPlan(id){
+  if (id === PLAN.id || !PLANS[id]) return;
+  save(); applyPlan(id);
+  state = load() || defaultState(); undoStack.length = redoStack.length = 0; ui.sel = null; ui.mA = ui.mCur = null;
+  renderPlanUI(); renderOpenings(); renderDims(); fitView(); renderAll();
+  window.View3D?.setPlan();
+}
+$('#planSel').onchange = e => switchPlan(e.target.value);
 
 function setLang(l){
   LANG = l; try { localStorage.setItem(LANG_KEY, l); } catch(e) {}
@@ -1521,7 +1632,9 @@ import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {CSS2DRenderer, CSS2DObject} from 'three/addons/renderers/CSS2DRenderer.js';
 
 const stage = $('#stage'), host = $('#view3d');
-const OX = 6000, OY = 5300, H = 2.8, FOV = 45;       // 户型中心放在世界原点，层高 2.8 m
+const lotMat = new THREE.MeshStandardMaterial({color:0xddd6c6, roughness:1});   // 场地（碎石地面）
+let OX = PLAN.center[0], OY = PLAN.center[1];
+const H = 2.8, FOV = 45;       // 户型中心放在世界原点，层高 2.8 m
 const wx = x => (x - OX) / 1000, wz = y => (y - OY) / 1000, M = v => v / 1000;
 const SW = () => stage.clientWidth, SH = () => stage.clientHeight;
 const opt = {cut:2.8, furn:true, labels:true, night:false, hour:10, mode:'orbit'};
@@ -2306,6 +2419,10 @@ function buildArch(){
       const pl = new THREE.PointLight(0xffd9a8, 0, 7, 1.6); pl.position.set(wx(r.at[0]), H - .25, wz(r.at[1])); lampG.add(pl);
     }
   });
+  if (PLAN.lot){
+    const [x0, y0, x1, y1] = PLAN.lot, lot = new THREE.Mesh(new THREE.PlaneGeometry(M(x1-x0), M(y1-y0)), lotMat);
+    lot.rotation.x = -Math.PI/2; lot.position.set(wx((x0+x1)/2), -.005, wz((y0+y1)/2)); lot.receiveShadow = true; archFloor.add(lot);
+  }
   [...DOORS, ...SLIDES].forEach(d => { const [x0, y0, x1, y1] = d.rect; const s = box(M(x1-x0), .012, M(y1-y0), mat('#d8d0c0', {roughness:.3}), wx((x0+x1)/2), 0, wz((y0+y1)/2)); s.castShadow = false; archFloor.add(s); });
   WALLS.forEach((w, i) => {
     if (state.demolished.includes('w'+i)) return;
@@ -2313,10 +2430,10 @@ function buildArch(){
     colliders.push([wx(w[0]), wz(w[1]), wx(w[2]), wz(w[3])]);
   });
   // 门洞、飘窗洞口上方过梁
-  [...DOORS.map(d => [d.rect, 2.1]), ...SLIDES.map(s => [s.rect, s.v ? 2.4 : 2.1]), [[10270,800,10510,2600], 2.4], [[10270,4260,10510,5740], 2.4]]
+  [...DOORS.map(d => [d.rect, 2.1]), ...SLIDES.map(s => [s.rect, s.v ? 2.4 : 2.1]), ...PLAN.lintels]
     .forEach(([r, h]) => { if (top > h) wallBox(r, h, top); });
   WINS.forEach((r, i) => {
-    const sill = i === 0 ? 1.4 : i >= 6 ? .45 : .9, head = 2.4;
+    const sill = PLAN.winSill(i), head = 2.4;
     wallBox(r, 0, Math.min(sill, top)); if (top > head) wallBox(r, head, top);
     colliders.push([wx(r[0]), wz(r[1]), wx(r[2]), wz(r[3])]);
     const gTop = Math.min(head, top); if (gTop <= sill) return;
@@ -2399,7 +2516,7 @@ function applyLight(){
   sun.intensity = opt.night ? .05 : 1.4 + Math.sin(Math.PI*t)*1.6;
   hemi.intensity = opt.night ? .12 : 1.1;
   scene.background = new THREE.Color(opt.night ? 0x1c2130 : 0xf7f4ee);
-  ground.material.color.set(opt.night ? 0x2a2e38 : 0xf2eee7);
+  ground.material.color.set(opt.night ? 0x2a2e38 : 0xf2eee7); lotMat.color.set(opt.night ? 0x353842 : 0xddd6c6);
   lampG.children.forEach(o => { if (o.isPointLight) o.intensity = opt.night ? 6 : 0; else o.material.emissiveIntensity = opt.night ? 2 : .3; });
   renderer.toneMappingExposure = opt.night ? 1.25 : 1.05;
   envK = opt.night ? .15 : 1; matCache.forEach(m => { if (m.envMap) m.envMapIntensity = m.userData.env*envK; });
@@ -2572,7 +2689,7 @@ function setMode(m){
     window.select(null);
     if (opt.cut < H){ opt.cut = H; syncCutBtns(); sync(); }
     orbit.enabled = false; fly = null;
-    camera.position.set(wx(4200), 1.6, wz(8755)); camera.lookAt(wx(7000), 1.5, wz(8755));   // 入户门外
+    const {pos, look} = PLAN.walk; camera.position.set(wx(pos[0]), 1.6, wz(pos[1])); camera.lookAt(wx(look[0]), 1.5, wz(look[1]));   // 入户门外
     $('#walkOverlay').style.display = 'flex';
     syncHint3d();
   } else {
@@ -2667,8 +2784,14 @@ function loop(){
 function shot(){ const a = document.createElement('a'); a.download = tr('户型装修方案', 'floor-plan-design') + '-3D.png'; a.href = renderer.domElement.toDataURL('image/png'); a.click(); }
 
 function relang(){ syncWalkTexts(); if (inited) buildLabels(); }
+function setPlan(){
+  OX = PLAN.center[0]; OY = PLAN.center[1]; sigArch = sigFurn = sigLabels = '';
+  if (!inited) return;
+  if (opt.mode === 'walk') setMode('orbit');
+  if (active) { sync(true); setPose(isoWhole()); }
+}
 
-window.View3D = {enter, exit, relang, sync:() => sync(), shot, groundAt, flyToRoom:id => active && !anim && flyToRoom(id), walking:() => active && opt.mode === 'walk'};
+window.View3D = {enter, exit, relang, setPlan, sync:() => sync(), shot, groundAt, flyToRoom:id => active && !anim && flyToRoom(id), walking:() => active && opt.mode === 'walk'};
 </script>
 </body>
 </html>
